@@ -3,14 +3,15 @@ from argparse import ArgumentParser, ArgumentTypeError
 from email import message_from_file, policy
 from pathlib import Path
 from typing import List
-
+import secrets
+import os
 
 def extract_attachments(file: Path, destination: Path) -> None:
     print(f'PROCESSING FILE "{file}"')
     with file.open() as f:
         email_message = message_from_file(f, policy=policy.default)
         email_subject = email_message.get('Subject')
-        basepath = destination / sanitize_foldername(email_subject)
+        basepath = destination
         # ignore inline attachments
         attachments = [item for item in email_message.iter_attachments() if item.is_attachment()]  # type: ignore
         if not attachments:
@@ -18,6 +19,11 @@ def extract_attachments(file: Path, destination: Path) -> None:
             return
         for attachment in attachments:
             filename = attachment.get_filename()
+            if not filename:
+                continue
+            filenamea, file_extension = os.path.splitext(filename)
+            filename = "".join([c for c in filename if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+            filename = secrets.token_hex(10) + file_extension
             print(f'>> Attachment found: {filename}')
             filepath = basepath / filename
             payload = attachment.get_payload(decode=True)
